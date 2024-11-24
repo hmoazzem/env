@@ -1,0 +1,66 @@
+flowchart TB
+    %% Subgraphs
+    subgraph VM1[VM with GPU]
+        vCPU1[vCPU]
+        vMEM1[vMemory]
+        vGPU[Passthrough GPU]
+    end
+
+    subgraph VM2[VM without GPU]
+        vCPU2[vCPU]
+        vMEM2[vMemory]
+    end
+
+    subgraph HOST[Host System]
+        CPU[Physical CPU]
+        MEM[Physical Memory]
+        HYP["Hypervisor (QEMU/KVM)"]
+
+        subgraph VFIO_SYSTEM[VFIO/IOMMU System]
+            direction LR
+            IOMMU["IOMMU (Guest to Host Address Translation)"]
+            VFIO[VFIO Driver]
+            DMA_ENGINE[DMA Engine]
+        end
+    end
+
+    subgraph HW[Hardware Layer]
+        pCPU[CPU]
+        pMEM[Memory]
+        pGPU[GPU]
+    end
+
+    %% Core System Connections
+    vCPU1 --> HYP
+    vCPU2 --> HYP
+    HYP --> CPU
+    CPU --> pCPU
+    vMEM1 --> HYP
+    vMEM2 --> HYP
+    HYP --> MEM
+    MEM --> pMEM
+
+    %% Critical Memory Translation Path
+    vGPU <--> VFIO
+    VFIO <--> IOMMU
+    IOMMU <--> MEM
+    IOMMU <--> DMA_ENGINE
+    DMA_ENGINE <---> pGPU
+
+    %% Styles
+    classDef default fill:#f9f9f9,stroke:#333,color:#333
+    classDef cpu fill:#E63946,stroke:#9B2226,color:#FFFFFF
+    classDef memory fill:#2A9D8F,stroke:#264653,color:#FFFFFF
+    classDef gpu fill:#4895EF,stroke:#3F37C9,color:#FFFFFF
+    classDef interface fill:#F4A261,stroke:#E76F51,color:#FFFFFF
+    classDef iommu fill:#1D3557,stroke:#457B9D,color:#FFFFFF
+    classDef vfio fill:#E9C46A,stroke:#F4A261,color:#000000
+    classDef dma fill:#6A0572,stroke:#3D005C,color:#FFFFFF
+
+    class vCPU1,vCPU2,CPU,pCPU cpu
+    class vMEM1,vMEM2,MEM,pMEM memory
+    class vGPU,pGPU gpu
+    class HYP interface
+    class IOMMU iommu
+    class VFIO vfio
+    class DMA_ENGINE dma
